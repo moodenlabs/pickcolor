@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PickColor</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6C63FF" />
+  <link rel="icon" href="icon-192.png" />
+  <style>
+    :root {
+      --brand-color: #6c63ff;
+      --text-color: #333;
+      --bg-color: #f2f3f7;
+      --card-bg: #ffffff;
+      --hover-bg: #f9f9ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg-color);
+      color: var(--text-color);
+      padding: 2rem;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      color: var(--brand-color);
+      margin-bottom: 2rem;
+      font-weight: 600;
+    }
+
+    #drop-zone {
+      border: 3px dashed var(--brand-color);
+      background: var(--card-bg);
+      padding: 80px 40px;
+      margin: 0 auto;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 700px;
+      transition: 0.3s;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+
+    #drop-zone:hover {
+      background-color: var(--hover-bg);
+    }
+
+    canvas {
+      display: none;
+      margin: 30px auto 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+      cursor: crosshair;
+      max-width: 100%;
+      height: auto;
+    }
+
+    #color-info {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 16px;
+      margin: 0 auto;
+      max-width: 360px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      display: none;
+    }
+
+    .color-preview {
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      display: inline-block;
+      vertical-align: middle;
+      border: 1px solid #ccc;
+      margin-right: 15px;
+    }
+
+    .color-line {
+      margin-top: 12px;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .copy-btn {
+      margin-left: 10px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 6px;
+      background: var(--brand-color);
+      color: white;
+      cursor: pointer;
+      font-size: 0.85rem;
+    }
+
+    .copy-btn:hover {
+      background: #554ee4;
+    }
+
+    @media screen and (max-width: 600px) {
+      #drop-zone {
+        padding: 60px 20px;
+        font-size: 1rem;
+      }
+
+      .color-line {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+
+      .copy-btn {
+        align-self: flex-end;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>PickColor</h1>
+  <div id="drop-zone">이미지를 여기로 드래그하거나 클릭하여 업로드하세요</div>
+  <canvas id="canvas"></canvas>
+
+  <div id="color-info">
+    <div id="color-default-msg" style="font-size: 1rem; color: #888;">
+      이미지에서 색상을 선택하세요
+    </div>
+
+    <div id="color-selected" style="display:none;">
+      <div>
+        <span class="color-preview" id="preview"></span>
+        <strong>선택한 색상</strong>
+      </div>
+      <div class="color-line">
+        <span>HEX: <span id="hex-code"></span></span>
+        <button class="copy-btn" onclick="copyToClipboard('hex-code')">복사</button>
+      </div>
+      <div class="color-line">
+        <span>RGB: <span id="rgb-code"></span></span>
+        <button class="copy-btn" onclick="copyToClipboard('rgb-code')">복사</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById('drop-zone');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const preview = document.getElementById('preview');
+    const hexCode = document.getElementById('hex-code');
+    const rgbCode = document.getElementById('rgb-code');
+    const colorInfo = document.getElementById('color-info');
+    const colorDefaultMsg = document.getElementById('color-default-msg');
+    const colorSelected = document.getElementById('color-selected');
+
+    function handleImage(file) {
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx.drawImage(img, 0, 0);
+          canvas.style.display = 'block';
+          colorInfo.style.display = 'block';
+          scrollToCanvas();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function scrollToCanvas() {
+      setTimeout(() => {
+        canvas.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#554ee4';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.style.borderColor = '#6C63FF';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.style.borderColor = '#6C63FF';
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith('image/')) {
+        handleImage(file);
+      }
+    });
+
+    dropZone.addEventListener('click', () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = (e) => handleImage(e.target.files[0]);
+      input.click();
+    });
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor(e.clientX - rect.left);
+      const y = Math.floor(e.clientY - rect.top);
+      const pixel = ctx.getImageData(x, y, 1, 1).data;
+      const [r, g, b] = pixel;
+      const hex = "#" + [r, g, b].map(c => c.toString(16).padStart(2, '0')).join('');
+
+      preview.style.backgroundColor = hex;
+      hexCode.textContent = hex.toUpperCase();
+      rgbCode.textContent = `rgb(${r}, ${g}, ${b})`;
+
+      colorDefaultMsg.style.display = 'none';
+      colorSelected.style.display = 'block';
+    });
+
+    function copyToClipboard(elementId) {
+      const text = document.getElementById(elementId).textContent;
+      navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target;
+        btn.textContent = "복사됨!";
+        setTimeout(() => (btn.textContent = "복사"), 1000);
+      });
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  </script>
+</body>
+</html>
